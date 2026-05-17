@@ -154,6 +154,29 @@ const App: React.FC = () => {
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
   };
 
+  // Handle PayPal return after payment approval
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paypalStatus = params.get('paypal');
+    const orderId = params.get('token');
+    if (paypalStatus === 'success' && orderId && token) {
+      window.history.replaceState({}, '', window.location.pathname);
+      (async () => {
+        try {
+          const res = await api.post('/payment/paypal/capture-order', { orderId });
+          if (res.data.success) {
+            showToast('Payment confirmed! Welcome to Eagle Dash!', 'success');
+            setGameState('START');
+            verifyStatus();
+          }
+        } catch { showToast('Payment capture failed. Contact support.', 'error'); }
+      })();
+    } else if (paypalStatus === 'cancel') {
+      window.history.replaceState({}, '', window.location.pathname);
+      showToast('Payment cancelled.', 'error');
+    }
+  }, [token]);
+
   useEffect(() => {
     if (token) { verifyStatus(); fetchInventory(); }
     else { setGameState('AUTH'); }
@@ -212,9 +235,9 @@ const App: React.FC = () => {
   const handleSubscribe = async () => {
     setLoading(true);
     try {
-      const res = await api.post('/payment/checkout');
-      if (res.data.url) {
-        window.location.href = res.data.url;
+      const res = await api.post('/payment/paypal/create-order');
+      if (res.data.approvalUrl) {
+        window.location.href = res.data.approvalUrl;
       } else {
         showToast('Payment system not ready', 'error');
       }
@@ -678,10 +701,19 @@ const App: React.FC = () => {
         {gameState === 'SUBSCRIBE' && (
           <div className="overlay" onMouseDown={e => e.stopPropagation()}>
             <Lock size={48} color="#fbbf24" style={{ marginBottom: '1rem' }} />
-            <h1>Subscription Required</h1>
-            <p>Unlock infinite flights for just $0.10 USD!</p>
-            <button className="start-btn" onClick={handleSubscribe} style={{ background: '#22c55e' }}>{loading ? <div className="spinner" /> : 'SUBSCRIBE FOR $0.10'}</button>
-            <button className="start-btn" style={{ marginTop: '1rem', background: 'transparent' }} onClick={() => setToken('')}>LOGOUT</button>
+            <h1 style={{ color: '#f97316' }}>EAGLE DASH</h1>
+            <p style={{ fontSize: '1rem', marginBottom: '0.5rem' }}>Infinite Flight Pass</p>
+            <div style={{ background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: '12px', padding: '1rem 2rem', marginBottom: '1.5rem', textAlign: 'center' }}>
+              <div style={{ fontSize: '2.5rem', fontWeight: 900, color: '#fbbf24' }}>$0.05</div>
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>One-time unlock · All features</div>
+            </div>
+            <button className="start-btn" onClick={handleSubscribe} style={{ background: '#0070ba', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              {loading ? <div className="spinner" /> : <>
+                <span style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1.1rem' }}>Pay<span style={{ color: '#ffd140' }}>Pal</span></span>
+                <span>— Pay $0.05</span>
+              </>}
+            </button>
+            <button className="start-btn" style={{ marginTop: '0.75rem', background: 'transparent', border: '1px solid #334155', color: '#94a3b8', padding: '0.7rem' }} onClick={() => { setToken(''); localStorage.removeItem('eagleToken'); setGameState('AUTH'); }}>LOGOUT</button>
           </div>
         )}
 

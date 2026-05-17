@@ -49,3 +49,7 @@ Incoming: [original, original, original, original, none]
 12:30:25 PM [vite] (client) hmr update /src/App.css
 12:30:50 PM [vite] (client) page reload android/app/src/main/assets/public/index.html
 12:37:19 PM [vite] (client) page reload android/app/src/main/assets/public/index.html
+1:17:42 PM [vite] (client) hmr update /src/App.tsx
+1:17:47 PM [vite] (client) hmr update /src/App.tsx
+1:17:59 PM [vite] (client) hmr update /src/App.tsx
+1:30:24 PM [vite] (client) page reload android/app/src/main/assets/public/index.html
