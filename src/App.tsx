@@ -77,6 +77,11 @@ const App: React.FC = () => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState<any[]>([]);
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [adminTab, setAdminTab] = useState<'stats' | 'users'>('stats');
+  const [adminStats, setAdminStats] = useState<any>(null);
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const ADMIN_EMAIL = 'saqlain.senior21@gmail.com';
 
   // Game Logic State
   const [score, setScore] = useState(0);
@@ -243,6 +248,35 @@ const App: React.FC = () => {
       }
     } catch (err) { showToast('Payment failed', 'error'); }
     finally { setLoading(false); }
+  };
+
+  const fetchAdminStats = async () => {
+    try {
+      const [stats, users] = await Promise.all([
+        api.get('/admin/stats'),
+        api.get('/admin/users'),
+      ]);
+      setAdminStats(stats.data);
+      setAdminUsers(users.data);
+    } catch { showToast('Failed to load admin data', 'error'); }
+  };
+
+  const adminGrantSub = async (id: number) => {
+    await api.post(`/admin/users/${id}/subscribe`);
+    setAdminUsers(u => u.map(x => x.id === id ? { ...x, is_subscribed: 1 } : x));
+    showToast('Subscription granted', 'success');
+  };
+
+  const adminRevokeSub = async (id: number) => {
+    await api.post(`/admin/users/${id}/unsubscribe`);
+    setAdminUsers(u => u.map(x => x.id === id ? { ...x, is_subscribed: 0 } : x));
+    showToast('Subscription revoked', 'info');
+  };
+
+  const adminDeleteUser = async (id: number) => {
+    await api.delete(`/admin/users/${id}`);
+    setAdminUsers(u => u.filter(x => x.id !== id));
+    showToast('User deleted', 'info');
   };
 
   const handlePurchase = async (item: ShopItem) => {
@@ -717,6 +751,78 @@ const App: React.FC = () => {
           </div>
         )}
 
+        {showAdmin && (
+          <div className="overlay" onMouseDown={e => e.stopPropagation()} style={{ zIndex: 50, padding: '1rem' }}>
+            <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <h2 style={{ color: '#a855f7', margin: 0, fontSize: '1.1rem' }}>⚙ ADMIN PANEL</h2>
+              <button className="back-btn" style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem' }} onClick={() => setShowAdmin(false)}>✕ CLOSE</button>
+            </div>
+            <div className="shop-tabs" style={{ marginBottom: '0.75rem' }}>
+              <button className={adminTab === 'stats' ? 'active' : ''} onClick={() => setAdminTab('stats')}>STATS</button>
+              <button className={adminTab === 'users' ? 'active' : ''} onClick={() => { setAdminTab('users'); }}>USERS</button>
+            </div>
+
+            {adminTab === 'stats' && adminStats && (
+              <div className="sub-overlay" style={{ gap: '0.5rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', width: '100%', marginBottom: '0.5rem' }}>
+                  {[
+                    { label: 'Total Users', value: adminStats.totalUsers, color: '#3b82f6' },
+                    { label: 'Subscribers', value: adminStats.subscribers, color: '#22c55e' },
+                    { label: 'Revenue', value: `$${Number(adminStats.totalRevenue).toFixed(2)}`, color: '#fbbf24' },
+                    { label: 'Free Users', value: adminStats.totalUsers - adminStats.subscribers, color: '#94a3b8' },
+                  ].map(s => (
+                    <div key={s.label} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', padding: '0.6rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: s.color }}>{s.value}</div>
+                      <div style={{ fontSize: '0.65rem', color: '#64748b', textTransform: 'uppercase' }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ width: '100%' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: 1 }}>Recent Payments</div>
+                  {adminStats.recentPayments.length === 0 && <div style={{ color: '#64748b', fontSize: '0.75rem', textAlign: 'center', padding: '0.5rem' }}>No payments yet</div>}
+                  {adminStats.recentPayments.map((p: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.4rem 0', borderBottom: '1px solid #1e293b', fontSize: '0.7rem' }}>
+                      <span style={{ color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '55%' }}>{p.email.split('@')[0]}</span>
+                      <span style={{ color: '#22c55e' }}>${Number(p.amount).toFixed(2)}</span>
+                      <span style={{ color: '#64748b' }}>{new Date(p.date).toLocaleDateString()}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ width: '100%', marginTop: '0.5rem' }}>
+                  <div style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: 1 }}>Top Players</div>
+                  {adminStats.topPlayers.map((p: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.35rem 0', borderBottom: '1px solid #1e293b', fontSize: '0.7rem' }}>
+                      <span style={{ color: '#94a3b8' }}>{i+1}. {p.email.split('@')[0]}</span>
+                      <span style={{ color: '#fbbf24' }}>{p.high_score} pts</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {adminTab === 'users' && (
+              <div className="sub-overlay">
+                {adminUsers.map(u => (
+                  <div key={u.id} style={{ width: '100%', background: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', padding: '0.6rem', marginBottom: '0.4rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.3rem' }}>
+                      <span style={{ fontSize: '0.72rem', color: '#e2e8f0', fontWeight: 700 }}>{u.email.split('@')[0]}</span>
+                      <span style={{ fontSize: '0.65rem', color: u.is_subscribed ? '#22c55e' : '#ef4444', background: u.is_subscribed ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', padding: '1px 6px', borderRadius: '4px' }}>{u.is_subscribed ? 'SUBSCRIBED' : 'FREE'}</span>
+                    </div>
+                    <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.4rem' }}>Score: {u.high_score} · Coins: ${Number(u.coins).toFixed(2)}</div>
+                    <div style={{ display: 'flex', gap: '0.3rem' }}>
+                      {!u.is_subscribed
+                        ? <button onClick={() => adminGrantSub(u.id)} style={{ flex: 1, background: 'rgba(34,197,94,0.15)', border: '1px solid #22c55e', color: '#22c55e', borderRadius: '4px', padding: '3px', fontSize: '0.65rem', cursor: 'pointer' }}>+ SUB</button>
+                        : <button onClick={() => adminRevokeSub(u.id)} style={{ flex: 1, background: 'rgba(239,68,68,0.1)', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '4px', padding: '3px', fontSize: '0.65rem', cursor: 'pointer' }}>REVOKE</button>
+                      }
+                      {u.email !== ADMIN_EMAIL && <button onClick={() => adminDeleteUser(u.id)} style={{ flex: 1, background: 'rgba(239,68,68,0.05)', border: '1px solid #334155', color: '#64748b', borderRadius: '4px', padding: '3px', fontSize: '0.65rem', cursor: 'pointer' }}>DELETE</button>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {(gameState === 'START' || gameState === 'PLAYING' || gameState === 'GAMEOVER') && (
             <>
                 <div className="hud">
@@ -727,6 +833,9 @@ const App: React.FC = () => {
                     </div>
                     <div className="hud-right">
                         <div className="wallet" style={{ color: '#22c55e' }}>${typeof coins === 'number' ? coins.toFixed(2) : '0.00'}</div>
+                        {user?.email === ADMIN_EMAIL && (
+                          <div className="hud-logout" style={{ background: 'rgba(168,85,247,0.2)', borderColor: 'rgba(168,85,247,0.5)', color: '#a855f7' }} onClick={() => { fetchAdminStats(); setShowAdmin(true); }}>ADMIN</div>
+                        )}
                         <div className="hud-logout" onClick={() => setToken('')}><LogOut size={16}/></div>
                     </div>
                 </div>
@@ -758,6 +867,7 @@ const App: React.FC = () => {
                     <div className="overlay-nav">
                         <button onClick={(e) => { e.stopPropagation(); fetchLeaderboard(); setOverlayTab('LEADERBOARD'); }}><Trophy size={20} /> RANK</button>
                         <button onClick={(e) => { e.stopPropagation(); setOverlayTab('SHOP'); }}><ShoppingBag size={20} /> SHOP</button>
+                        {user?.email === ADMIN_EMAIL && <button onClick={(e) => { e.stopPropagation(); fetchAdminStats(); setShowAdmin(true); }} style={{ background: 'rgba(168,85,247,0.15)', borderColor: 'rgba(168,85,247,0.4)', color: '#a855f7' }}>⚙ ADMIN</button>}
                     </div>
                 </>
             )}
