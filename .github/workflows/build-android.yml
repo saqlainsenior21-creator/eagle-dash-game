@@ -43,13 +43,13 @@ jobs:
 
       - name: Decode keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/eagle-dash.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > $GITHUB_WORKSPACE/eagle-dash.keystore
 
       - name: Build signed release AAB
         working-directory: android
         run: |
           ./gradlew bundleRelease \
-            -Pandroid.injected.signing.store.file=../android/app/eagle-dash.keystore \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/eagle-dash.keystore \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
