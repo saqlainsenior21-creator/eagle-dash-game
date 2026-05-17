@@ -1,0 +1,51 @@
+
+> eagle-dash@0.0.0 dev
+> vite --port 5174
+
+
+  VITE v8.0.10  ready in 352 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: http://172.20.10.6:5174/
+  ➜  Network: http://169.254.42.46:5174/
+1:49:22 PM [vite] (client) hmr update /src/App.tsx
+1:49:54 PM [vite] (client) hmr update /src/App.tsx
+1:50:15 PM [vite] (client) hmr update /src/App.tsx
+1:50:15 PM [vite] (client) [console.error] The final argument passed to useEffect changed size between renders. The order and size of this array must remain constant.
+
+Previous: [original, original, original, original]
+Incoming: [original, original, original, original, none]
+1:51:23 PM [vite] (client) hmr update /src/App.tsx
+1:51:53 PM [vite] (client) hmr update /src/App.tsx
+1:52:29 PM [vite] (client) hmr update /src/App.tsx
+1:52:42 PM [vite] (client) hmr update /src/App.tsx
+2:40:14 PM [vite] (client) hmr update /src/App.tsx
+2:40:21 PM [vite] (client) hmr update /src/App.tsx
+2:40:33 PM [vite] (client) hmr update /src/App.tsx
+2:40:47 PM [vite] (client) hmr update /src/App.tsx
+2:40:56 PM [vite] (client) hmr update /src/App.tsx
+2:41:30 PM [vite] (client) hmr update /src/App.tsx
+2:42:51 PM [vite] (client) hmr update /src/App.tsx
+2:43:16 PM [vite] (client) hmr update /src/App.tsx
+2:43:45 PM [vite] (client) hmr update /src/App.tsx
+2:44:05 PM [vite] (client) hmr update /src/App.tsx
+2:47:41 PM [vite] (client) hmr update /src/App.tsx
+2:50:31 PM [vite] (client) hmr update /src/App.tsx
+3:10:41 PM [vite] (client) hmr update /src/App.tsx
+3:14:15 PM [vite] (client) hmr update /src/App.tsx
+3:14:31 PM [vite] (client) hmr update /src/App.tsx
+3:14:47 PM [vite] (client) hmr update /src/App.tsx
+3:15:04 PM [vite] (client) hmr update /src/App.tsx
+3:46:14 PM [vite] (client) hmr update /src/App.tsx
+4:47:15 PM [vite] (client) [console.error] AxiosError: Network Error
+    at XMLHttpRequest.handleError (http://localhost:5174/node_modules/.vite/deps/axios.js?v=e6b353ea:2030:16)
+4:47:15 PM [vite] (client) [console.error] AxiosError: Network Error
+    at XMLHttpRequest.handleError (http://localhost:5174/node_modules/.vite/deps/axios.js?v=e6b353ea:2030:16)
+7:23:11 PM [vite] (client) [console.error] Auth Error: AxiosError: Network Error
+    at XMLHttpRequest.handleError (http://localhost:5174/node_modules/.vite/deps/axios.js?v=e6b353ea:2030:16)
+12:23:19 PM [vite] (client) hmr update /src/App.tsx
+12:29:49 PM [vite] (client) hmr update /src/App.tsx
+12:30:21 PM [vite] (client) hmr update /src/App.tsx
+12:30:25 PM [vite] (client) hmr update /src/App.css
+12:30:50 PM [vite] (client) page reload android/app/src/main/assets/public/index.html
+12:37:19 PM [vite] (client) page reload android/app/src/main/assets/public/index.html
