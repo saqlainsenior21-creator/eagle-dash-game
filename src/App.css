@@ -369,3 +369,8 @@ p {
 }
 
 @keyframes spin { 100% { transform: rotate(360deg); } }
+
+@keyframes bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-12px); }
+}

@@ -73,6 +73,10 @@ const App: React.FC = () => {
   const [user, setUser] = useState<any>(null);
   const [gameState, setGameState] = useState<'AUTH' | 'SUBSCRIBE' | 'START' | 'PLAYING' | 'GAMEOVER'>('AUTH');
   const [overlayTab, setOverlayTab] = useState<'MAIN' | 'LEADERBOARD' | 'SHOP'>('MAIN');
+  const [isGuest, setIsGuest] = useState(false);
+  const [guestPlays, setGuestPlays] = useState(() => parseInt(localStorage.getItem('guestPlays') || '3'));
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [tutorialPulse, setTutorialPulse] = useState(true);
   const [authForm, setAuthForm] = useState({ email: '', password: '' });
   const [isRegistering, setIsRegistering] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -186,6 +190,13 @@ const App: React.FC = () => {
     if (token) { verifyStatus(); fetchInventory(); }
     else { setGameState('AUTH'); }
   }, [token]);
+
+  const startGuestMode = () => {
+    setIsGuest(true);
+    const tutorialSeen = localStorage.getItem('tutorialSeen');
+    if (!tutorialSeen) setShowTutorial(true);
+    setGameState('START');
+  };
 
   const verifyStatus = async () => {
     setLoading(true);
@@ -704,14 +715,26 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (gameState === 'GAMEOVER') {
+      if (isGuest) {
+        const remaining = guestPlays - 1;
+        setGuestPlays(remaining);
+        localStorage.setItem('guestPlays', String(remaining));
+      } else {
         const runScore = Math.floor(distance + score);
-        // Earning rate: 100 points = $0.05
         const earnedUSD = parseFloat(((score + distance) / 2000).toFixed(2));
         api.post('/user/score', { score: runScore, coins: earnedUSD }).then(res => {
             setHighScore(res.data.high_score);
             setCoins(res.data.coins);
         });
         fetchLeaderboard();
+      }
+    }
+    if (gameState === 'PLAYING') {
+      const tutorialSeen = localStorage.getItem('tutorialSeen');
+      if (!tutorialSeen) {
+        setShowTutorial(true);
+        setTutorialPulse(true);
+      }
     }
   }, [gameState]);
 
@@ -722,13 +745,24 @@ const App: React.FC = () => {
       <div className="game-container" style={{ transform: `scale(${canvasScale})`, transformOrigin: 'center center' }}>
         {gameState === 'AUTH' && (
           <div className="overlay" onMouseDown={e => e.stopPropagation()}>
-            <h1>EAGLE DASH</h1>
-            <form className="auth-form" onSubmit={handleAuth}>
-              <input type="email" placeholder="Email" required onChange={e => setAuthForm({...authForm, email: e.target.value})} />
-              <input type="password" placeholder="Password" required onChange={e => setAuthForm({...authForm, password: e.target.value})} />
-              <button type="submit" className="start-btn">{loading ? <div className="spinner" /> : (isRegistering ? 'REGISTER' : 'LOGIN')}</button>
-            </form>
-            <p onClick={() => setIsRegistering(!isRegistering)} style={{ cursor: 'pointer', marginTop: '1rem' }}>{isRegistering ? 'Have account? Login' : 'New? Register'}</p>
+            <h1 style={{ fontSize: '2.8rem', letterSpacing: 2 }}>🦅 EAGLE DASH</h1>
+            <p style={{ color: '#fbbf24', fontWeight: 800, marginBottom: '0.25rem' }}>Dodge. Survive. Dominate.</p>
+
+            {guestPlays > 0 && (
+              <button className="start-btn" onClick={startGuestMode} style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', marginBottom: '0.75rem', fontSize: '1rem' }}>
+                ▶ PLAY FREE ({guestPlays} free {guestPlays === 1 ? 'play' : 'plays'} left)
+              </button>
+            )}
+
+            <div style={{ width: '100%', borderTop: '1px solid #1e293b', paddingTop: '0.75rem', marginTop: guestPlays > 0 ? '0' : '0.5rem' }}>
+              <p style={{ fontSize: '0.75rem', color: '#64748b', margin: '0 0 0.5rem' }}>{isRegistering ? 'Create account to save scores' : 'Login to your account'}</p>
+              <form className="auth-form" onSubmit={handleAuth} style={{ gap: '0.6rem' }}>
+                <input type="email" placeholder="Email" required onChange={e => setAuthForm({...authForm, email: e.target.value})} />
+                <input type="password" placeholder="Password" required onChange={e => setAuthForm({...authForm, password: e.target.value})} />
+                <button type="submit" className="start-btn" style={{ background: '#1e293b', border: '1px solid #3b82f6', fontSize: '0.9rem', padding: '0.9rem' }}>{loading ? <div className="spinner" /> : (isRegistering ? 'REGISTER' : 'LOGIN')}</button>
+              </form>
+              <p onClick={() => setIsRegistering(!isRegistering)} style={{ cursor: 'pointer', marginTop: '0.5rem', fontSize: '0.8rem' }}>{isRegistering ? 'Have account? Login' : 'New? Register'}</p>
+            </div>
           </div>
         )}
 
@@ -844,15 +878,28 @@ const App: React.FC = () => {
                     {activePowerUps.magnet > 0 && <Magnet size={20} color="#a855f7" className="p-icon pulse" />}
                     {activePowerUps.boost > 0 && <Zap size={20} color="#22c55e" className="p-icon pulse" />}
                 </div>
-                <canvas 
-                    ref={canvasRef} 
-                    width={CANVAS_WIDTH} 
-                    height={CANVAS_HEIGHT} 
-                    onMouseDown={() => handleInput(true)} 
+                <canvas
+                    ref={canvasRef}
+                    width={CANVAS_WIDTH}
+                    height={CANVAS_HEIGHT}
+                    onMouseDown={() => handleInput(true)}
                     onMouseUp={() => handleInput(false)}
                     onTouchStart={() => handleInput(true)}
                     onTouchEnd={() => handleInput(false)}
                 />
+
+                {showTutorial && (
+                  <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'all', zIndex: 30 }}
+                    onClick={() => { setShowTutorial(false); localStorage.setItem('tutorialSeen', '1'); }}
+                    onTouchStart={() => { setShowTutorial(false); localStorage.setItem('tutorialSeen', '1'); }}>
+                    <div style={{ textAlign: 'center', background: 'rgba(2,6,23,0.85)', borderRadius: '16px', padding: '1.5rem 2rem', border: '1px solid rgba(249,115,22,0.4)' }}>
+                      <div style={{ fontSize: '3rem', animation: 'bounce 0.6s infinite alternate' }}>👆</div>
+                      <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#f97316', marginTop: '0.5rem' }}>TAP TO FLY</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.3rem' }}>Hold to climb · Release to dive</div>
+                      <div style={{ fontSize: '0.65rem', color: '#475569', marginTop: '0.75rem' }}>Tap anywhere to dismiss</div>
+                    </div>
+                  </div>
+                )}
             </>
         )}
 
@@ -861,14 +908,50 @@ const App: React.FC = () => {
             {overlayTab === 'MAIN' && (
                 <>
                     <h1 style={{ color: gameState === 'GAMEOVER' ? '#ef4444' : '#f97316' }}>{gameState === 'GAMEOVER' ? 'CRASHED!' : 'READY TO DASH?'}</h1>
-                    {gameState === 'GAMEOVER' && <div className="stats"><div>Run Total: {Math.floor(distance + score)}</div></div>}
-                    <div className="best" style={{ color: getRank(highScore).color }}><Award size={24} /> {getRank(highScore).title}: {highScore}</div>
-                    <button className="start-btn" onClick={(e) => { e.stopPropagation(); resetGame(); }}>TAP TO FLY</button>
-                    <div className="overlay-nav">
-                        <button onClick={(e) => { e.stopPropagation(); fetchLeaderboard(); setOverlayTab('LEADERBOARD'); }}><Trophy size={20} /> RANK</button>
-                        <button onClick={(e) => { e.stopPropagation(); setOverlayTab('SHOP'); }}><ShoppingBag size={20} /> SHOP</button>
-                        {user?.email === ADMIN_EMAIL && <button onClick={(e) => { e.stopPropagation(); fetchAdminStats(); setShowAdmin(true); }} style={{ background: 'rgba(168,85,247,0.15)', borderColor: 'rgba(168,85,247,0.4)', color: '#a855f7' }}>⚙ ADMIN</button>}
-                    </div>
+                    {gameState === 'GAMEOVER' && <div className="stats"><div>Score: {Math.floor(distance + score)}</div></div>}
+
+                    {/* Guest conversion block */}
+                    {isGuest && gameState === 'GAMEOVER' && (
+                      <div style={{ width: '100%', background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: '12px', padding: '0.85rem', marginBottom: '0.75rem', textAlign: 'center' }}>
+                        {guestPlays > 0 ? (
+                          <>
+                            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginBottom: '0.2rem' }}>⚡ {guestPlays} free {guestPlays === 1 ? 'play' : 'plays'} remaining</div>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Unlock infinite flights for just <span style={{ color: '#fbbf24', fontWeight: 800 }}>$0.05</span></div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fbbf24', marginBottom: '0.25rem' }}>🔒 Free plays used up!</div>
+                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.6rem' }}>Unlock infinite flights for just <span style={{ color: '#22c55e', fontWeight: 900 }}>$0.05</span> — less than a candy!</div>
+                            <button onClick={(e) => { e.stopPropagation(); setGameState('AUTH'); setIsRegistering(true); }} style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', border: 'none', color: '#fff', fontWeight: 900, padding: '0.6rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem', width: '100%' }}>
+                              CREATE ACCOUNT & UNLOCK 🚀
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {!isGuest && <div className="best" style={{ color: getRank(highScore).color }}><Award size={24} /> {getRank(highScore).title}: {highScore}</div>}
+
+                    {(isGuest && guestPlays > 0) || !isGuest ? (
+                      <button className="start-btn" onClick={(e) => { e.stopPropagation(); resetGame(); }}>
+                        {isGuest ? `▶ FLY AGAIN (${guestPlays} left)` : 'TAP TO FLY'}
+                      </button>
+                    ) : null}
+
+                    {gameState === 'START' && !isGuest && (
+                      <div className="overlay-nav">
+                          <button onClick={(e) => { e.stopPropagation(); fetchLeaderboard(); setOverlayTab('LEADERBOARD'); }}><Trophy size={20} /> RANK</button>
+                          <button onClick={(e) => { e.stopPropagation(); setOverlayTab('SHOP'); }}><ShoppingBag size={20} /> SHOP</button>
+                          {user?.email === ADMIN_EMAIL && <button onClick={(e) => { e.stopPropagation(); fetchAdminStats(); setShowAdmin(true); }} style={{ background: 'rgba(168,85,247,0.15)', borderColor: 'rgba(168,85,247,0.4)', color: '#a855f7' }}>⚙ ADMIN</button>}
+                      </div>
+                    )}
+                    {!isGuest && gameState === 'GAMEOVER' && (
+                      <div className="overlay-nav">
+                          <button onClick={(e) => { e.stopPropagation(); fetchLeaderboard(); setOverlayTab('LEADERBOARD'); }}><Trophy size={20} /> RANK</button>
+                          <button onClick={(e) => { e.stopPropagation(); setOverlayTab('SHOP'); }}><ShoppingBag size={20} /> SHOP</button>
+                          {user?.email === ADMIN_EMAIL && <button onClick={(e) => { e.stopPropagation(); fetchAdminStats(); setShowAdmin(true); }} style={{ background: 'rgba(168,85,247,0.15)', borderColor: 'rgba(168,85,247,0.4)', color: '#a855f7' }}>⚙ ADMIN</button>}
+                      </div>
+                    )}
                 </>
             )}
 
