@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.sj.eagledash',
+  appId: 'com.eagledashgames.eagledash',
   appName: 'Eagle Dash',
   webDir: 'dist'
 };

@@ -2,6 +2,6 @@
 <resources>
     <string name="app_name">Eagle Dash</string>
     <string name="title_activity_main">Eagle Dash</string>
-    <string name="package_name">com.sj.eagledash</string>
-    <string name="custom_url_scheme">com.sj.eagledash</string>
+    <string name="package_name">com.eagledashgames.eagledash</string>
+    <string name="custom_url_scheme">com.eagledashgames.eagledash</string>
 </resources>

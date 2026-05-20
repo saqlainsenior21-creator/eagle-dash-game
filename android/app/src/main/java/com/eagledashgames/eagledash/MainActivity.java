@@ -1,4 +1,4 @@
-package com.sj.eagledash;
+package com.eagledashgames.eagledash;
 
 import com.getcapacitor.BridgeActivity;
 

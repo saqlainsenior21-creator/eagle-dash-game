@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Shield, Zap, Magnet, Award, Lock, LogOut, CheckCircle, AlertCircle, Loader, ShoppingBag, Trophy, User } from 'lucide-react';
 import './App.css';
+import { initAds, showBanner, hideBanner, showInterstitial, showRewarded } from './adService';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'https://eagle-dash-production.up.railway.app/api';
 
@@ -104,6 +105,9 @@ const App: React.FC = () => {
   const [activePowerUp, setActivePowerUp] = useState(localStorage.getItem('activePowerUp') || 'none');
   const [shopCategory, setShopCategory] = useState<'skin' | 'wings' | 'beak' | 'eyes' | 'powerup'>('skin');
   const [canvasScale, setCanvasScale] = useState(1);
+  const [reviveAvailable, setReviveAvailable] = useState(false);
+  const [reviveLoading, setReviveLoading] = useState(false);
+  const reviveUsed = useRef(false);
 
   useEffect(() => {
     const updateScale = () => {
@@ -115,6 +119,8 @@ const App: React.FC = () => {
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
   }, []);
+
+  useEffect(() => { initAds(); }, []);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const eaglePos = useRef({ y: 300, velocity: 0 });
@@ -311,10 +317,26 @@ const App: React.FC = () => {
       if (item.category === 'powerup') setActivePowerUp(item.id);
   };
 
+  const handleRevive = async () => {
+    setReviveLoading(true);
+    const rewarded = await showRewarded();
+    setReviveLoading(false);
+    if (rewarded) {
+      reviveUsed.current = true;
+      setReviveAvailable(false);
+      eaglePos.current = { y: 300, velocity: 0 };
+      powerUpTimers.current.shield = true;
+      entities.current = [];
+      setActivePowerUps(p => ({ ...p, shield: true }));
+      setGameState('PLAYING');
+    }
+  };
+
   const resetGame = () => {
     eaglePos.current = { y: 300, velocity: 0 };
     entities.current = [];
     particles.current = [];
+    reviveUsed.current = false;
     
     // Default timers
     const initialPowerUps = { shield: false, magnet: 0, boost: 0 };
@@ -715,6 +737,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (gameState === 'GAMEOVER') {
+      hideBanner();
+      if (!isGuest) showInterstitial();
+      setReviveAvailable(!reviveUsed.current && !isGuest);
       if (isGuest) {
         const remaining = guestPlays - 1;
         setGuestPlays(remaining);
@@ -730,11 +755,15 @@ const App: React.FC = () => {
       }
     }
     if (gameState === 'PLAYING') {
+      showBanner();
       const tutorialSeen = localStorage.getItem('tutorialSeen');
       if (!tutorialSeen) {
         setShowTutorial(true);
         setTutorialPulse(true);
       }
+    }
+    if (gameState === 'START') {
+      hideBanner();
     }
   }, [gameState]);
 
@@ -909,6 +938,33 @@ const App: React.FC = () => {
                 <>
                     <h1 style={{ color: gameState === 'GAMEOVER' ? '#ef4444' : '#f97316' }}>{gameState === 'GAMEOVER' ? 'CRASHED!' : 'READY TO DASH?'}</h1>
                     {gameState === 'GAMEOVER' && <div className="stats"><div>Score: {Math.floor(distance + score)}</div></div>}
+
+                    {/* Watch Ad to Revive */}
+                    {gameState === 'GAMEOVER' && reviveAvailable && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleRevive(); }}
+                        disabled={reviveLoading}
+                        style={{
+                          width: '100%',
+                          background: 'linear-gradient(135deg, #7c3aed, #4f46e5)',
+                          border: '2px solid #a78bfa',
+                          color: '#fff',
+                          fontWeight: 900,
+                          fontSize: '1rem',
+                          padding: '0.85rem',
+                          borderRadius: '12px',
+                          cursor: reviveLoading ? 'wait' : 'pointer',
+                          marginBottom: '0.75rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          boxShadow: '0 0 20px rgba(124,58,237,0.5)',
+                        }}
+                      >
+                        {reviveLoading ? <div className="spinner" /> : <>📺 WATCH AD TO REVIVE</>}
+                      </button>
+                    )}
 
                     {/* Guest conversion block */}
                     {isGuest && gameState === 'GAMEOVER' && (
